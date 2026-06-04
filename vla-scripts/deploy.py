@@ -3,6 +3,7 @@ deploy.py
 
 Starts VLA server which the client can query to get robot actions.
 """
+# 这个代码非常简单，就是用网络协议把动作传回去
 
 import os.path
 
@@ -76,6 +77,7 @@ class OpenVLAServer:
 
 
     def get_server_action(self, payload: Dict[str, Any]) -> str:
+        # 获取动作
         try:
             if double_encode := "encoded" in payload:
                 # Support cases where `json_numpy` is hard to install, and numpy arrays are "double-encoded" as strings
