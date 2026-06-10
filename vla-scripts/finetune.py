@@ -64,7 +64,7 @@ from prismatic.vla.datasets.rlds.utils.data_utils import save_dataset_statistics
 # Sane Defaults
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-
+# 这部分纯是config,没什么好说的
 @dataclass
 class FinetuneConfig:
     # fmt: off
@@ -778,11 +778,11 @@ def finetune(cfg: FinetuneConfig) -> None:
     # Get experiment run ID
     run_id = get_run_id(cfg)
 
-    # Create experiment run directory
+    # 这里的id只是命一个名，没有实际意义
     run_dir = cfg.run_root_dir / run_id
     os.makedirs(run_dir, exist_ok=True)
 
-    # GPU setup
+    # GPU设置
     distributed_state = PartialState()
     device_id = distributed_state.local_process_index
     torch.cuda.set_device(device_id)
@@ -810,6 +810,7 @@ def finetune(cfg: FinetuneConfig) -> None:
     # the `modeling_prismatic.py` file in this codebase; if so, we will copy
     # the file to the downloaded or locally stored checkpoint directory so
     # that the user's changes to the VLA class logic go into effect
+    # 下载模型的部分
     if model_is_on_hf_hub(cfg.vla_path):
         # Download model directly from Hugging Face Hub
         vla_download_path = snapshot_download(repo_id=cfg.vla_path)
@@ -824,13 +825,17 @@ def finetune(cfg: FinetuneConfig) -> None:
 
     # Update config.json and sync model files
     if distributed_state.is_main_process:
+        # 更新自动映射文件（`auto_map`），以确保HF Auto Classes能够正确找到用户修改后的模型文件
+        # 这部分映射告诉HF模型用的是哪个自定义类
         update_auto_map(cfg.vla_path)
+        # 检查模型逻辑是否不匹配（比如用户修改了`modeling_prismatic.py`但没有更新到模型文件夹）
         check_model_logic_mismatch(cfg.vla_path)
 
     # Wait for model files to be synced
     dist.barrier()
 
     # Load processor and VLA
+    # 读取VLA
     processor = AutoProcessor.from_pretrained(cfg.vla_path, trust_remote_code=True)
     vla = AutoModelForVision2Seq.from_pretrained(
         cfg.vla_path,
@@ -842,7 +847,7 @@ def finetune(cfg: FinetuneConfig) -> None:
     # Set number of images in VLA input
     vla.vision_backbone.set_num_images_in_input(cfg.num_images_in_input)
 
-    # LoRA setup
+    # LoRA 定义和加载，peft的代码已经封装好了，直接用就行。
     if cfg.use_lora:
         lora_config = LoraConfig(
             r=cfg.lora_rank,
@@ -874,7 +879,8 @@ def finetune(cfg: FinetuneConfig) -> None:
     # Wrap VLA with DDP
     vla = wrap_ddp(vla, device_id, find_unused=True)
 
-    # If applicable, instantiate proprio projector
+    # 这里的三个代码是为了控制是否使用proprio输入，是否使用L1回归，是否使用diffusion，如果使用了，就实例化相应的模块
+    # L1回归是加入一个MLP,diffusion就是diffusion,如果两个都不加就是openvla原版的离散动作预测
     if cfg.use_proprio:
         proprio_projector = init_module(
             ProprioProjector,
@@ -944,7 +950,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         gamma=0.1,  # Multiplicative factor of learning rate decay
     )
 
-    # Create Action Tokenizer
+    # Action Tokenizer，这里需要细看一下。
     action_tokenizer = ActionTokenizer(processor.tokenizer)
 
     # Load Fine-tuning Dataset =>> note that we use an RLDS-formatted dataset following Open X-Embodiment by default.
@@ -1028,7 +1034,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         "next_actions_l1_loss": deque(maxlen=cfg.grad_accumulation_steps),
     }
 
-    # Start training
+    # 这个循环就是训练的逻辑
     with tqdm.tqdm(total=cfg.max_steps, leave=False) as progress:
         vla.train()
         optimizer.zero_grad()

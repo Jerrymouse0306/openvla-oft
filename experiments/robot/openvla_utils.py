@@ -63,6 +63,7 @@ def update_auto_map(pretrained_checkpoint: str) -> None:
     Args:
         pretrained_checkpoint: Path to the checkpoint directory
     """
+    # 确保自动映射部分是对的，如果不对就把它改对。
     if not os.path.isdir(pretrained_checkpoint):
         return
 

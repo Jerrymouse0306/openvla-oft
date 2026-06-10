@@ -1,5 +1,14 @@
 # README_self
 
+## debug记录
+
+这部分丢了……但主要就是关于mujoco的，可以看cosmos-policy
+
+## 笔记
+
+### 训练部分
+训练部分的代码就是训练几个openvla之外的模型，例如一个用于获取本体状态的MLP，三种不同的输出头，MLP，diffusion head和原本的自回归。重点就是一个init_module和一个tokenizer
+
 ## 项目内容总结
 
 这个仓库是 **OpenVLA-OFT** 的代码实现，用于对 Vision-Language-Action (VLA) 模型做机器人任务微调、推理部署和基准评测。它的核心思想是：输入机器人观测图像、任务语言指令，以及可选的机器人本体状态 proprioception，输出一段未来机器人动作 chunk。项目支持原始 OpenVLA 的离散动作 token 预测，也支持 OpenVLA-OFT 中更高效的连续动作头，例如 L1 regression action head 和 diffusion action head。
